@@ -1,988 +1,1008 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>p5.js Life Experience Studio</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0e0c0a;
-      --panel: #161410;
-      --border: #2a2520;
-      --accent: #e8845a;
-      --accent2: #a8c5a0;
-      --text: #e8e2d9;
-      --muted: #7a7067;
-      --user-bubble: #1e1b17;
-      --ai-bubble: #191510;
-      --code-bg: #0a0908;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* ── Header ── */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 24px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      flex-shrink: 0;
-      gap: 16px;
-    }
-
-    .logo {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.2rem;
-      color: var(--accent);
-      white-space: nowrap;
-    }
-
-    .logo span {
-      color: var(--text);
-      font-style: italic;
-    }
-
-    .api-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 1;
-      max-width: 480px;
-    }
-
-    .api-row label {
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      white-space: nowrap;
-    }
-
-    .api-row input {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 10px;
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.75rem;
-      outline: none;
-      transition: border-color .2s;
-    }
-
-    .api-row input:focus {
-      border-color: var(--accent);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--border);
-      flex-shrink: 0;
-      transition: background .3s;
-    }
-
-    .status-dot.ok {
-      background: var(--accent2);
-    }
-
-    .status-dot.err {
-      background: #e06060;
-    }
-
-    /* ── Main layout ── */
-    .workspace {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* ── Chat panel ── */
-    .chat-panel {
-      width: 420px;
-      min-width: 320px;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      scrollbar-width: thin;
-      scrollbar-color: var(--border) transparent;
-    }
-
-    .welcome {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--muted);
-    }
-
-    .welcome h2 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.5rem;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-
-    .welcome p {
-      font-size: 0.85rem;
-      line-height: 1.6;
-      margin-bottom: 16px;
-    }
-
-    .example-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: center;
-    }
-
-    .chip {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-size: 0.75rem;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all .2s;
-    }
-
-    .chip:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    /* Message bubbles */
-    .msg {
-      display: flex;
-      gap: 10px;
-      animation: fadeUp .25s ease;
-    }
-
-    @keyframes fadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .msg.user {
-      flex-direction: row-reverse;
-    }
-
-    .avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-      font-weight: 500;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .msg.user .avatar {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .msg.ai .avatar {
-      background: #2a2520;
-      color: var(--accent2);
-    }
-
-    .bubble {
-      max-width: 85%;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      line-height: 1.6;
-    }
-
-    .msg.user .bubble {
-      background: var(--user-bubble);
-      border: 1px solid var(--border);
-      border-top-right-radius: 3px;
-    }
-
-    .msg.ai .bubble {
-      background: var(--ai-bubble);
-      border: 1px solid var(--border);
-      border-top-left-radius: 3px;
-    }
-
-    .bubble .code-block {
-      margin-top: 8px;
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.72rem;
-      overflow-x: auto;
-      white-space: pre;
-      color: #a8c5a0;
-      max-height: 180px;
-      overflow-y: auto;
-    }
-
-    .run-btn {
-      margin-top: 8px;
-      background: transparent;
-      border: 1px solid var(--accent);
-      color: var(--accent);
-      border-radius: 6px;
-      padding: 5px 12px;
-      font-size: 0.75rem;
-      cursor: pointer;
-      font-family: 'DM Mono', monospace;
-      transition: all .2s;
-    }
-
-    .run-btn:hover {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .thinking {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-      padding: 4px 0;
-    }
-
-    .thinking span {
-      width: 6px;
-      height: 6px;
-      background: var(--muted);
-      border-radius: 50%;
-      animation: blink 1.2s infinite;
-    }
-
-    .thinking span:nth-child(2) {
-      animation-delay: .2s;
-    }
-
-    .thinking span:nth-child(3) {
-      animation-delay: .4s;
-    }
-
-    @keyframes blink {
-
-      0%,
-      80%,
-      100% {
-        opacity: .2;
-        transform: scale(.8);
-      }
-
-      40% {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    /* ── Chat input ── */
-    .chat-input-area {
-      border-top: 1px solid var(--border);
-      padding: 14px 16px;
-      background: var(--panel);
-    }
-
-    .input-row {
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
-    }
-
-    textarea {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.85rem;
-      resize: none;
-      outline: none;
-      min-height: 44px;
-      max-height: 120px;
-      line-height: 1.5;
-      transition: border-color .2s;
-    }
-
-    textarea:focus {
-      border-color: var(--accent);
-    }
-
-    textarea::placeholder {
-      color: var(--muted);
-    }
-
-    .send-btn {
-      width: 44px;
-      height: 44px;
-      background: var(--accent);
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: all .2s;
-    }
-
-    .send-btn:hover {
-      background: #d4704a;
-    }
-
-    .send-btn:disabled {
-      background: var(--border);
-      cursor: not-allowed;
-    }
-
-    .send-btn svg {
-      width: 18px;
-      height: 18px;
-      fill: #fff;
-    }
-
-    .hint {
-      font-size: 0.7rem;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-
-    /* ── Preview panel ── */
-    .preview-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .preview-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 20px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      flex-shrink: 0;
-    }
-
-    .preview-title {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .1em;
-    }
-
-    .preview-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .icon-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 10px;
-      color: var(--muted);
-      font-size: 0.72rem;
-      cursor: pointer;
-      font-family: 'DM Mono', monospace;
-      transition: all .2s;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .icon-btn:hover {
-      border-color: var(--accent2);
-      color: var(--accent2);
-    }
-
-    .icon-btn:disabled {
-      opacity: .4;
-      cursor: not-allowed;
-    }
-
-    .preview-canvas {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #060504;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .preview-canvas iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-    }
-
-    .empty-preview {
-      text-align: center;
-      color: var(--muted);
-    }
-
-    .empty-preview .big-icon {
-      font-size: 3rem;
-      margin-bottom: 12px;
-      opacity: .3;
-    }
-
-    .empty-preview p {
-      font-size: 0.85rem;
-      line-height: 1.6;
-    }
-
-    .code-editor-wrap {
-      border-top: 1px solid var(--border);
-      max-height: 220px;
-      display: none;
-      flex-direction: column;
-    }
-
-    .code-editor-wrap.visible {
-      display: flex;
-    }
-
-    .code-editor-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 14px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .code-editor-header span {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.7rem;
-      color: var(--muted);
-    }
-
-    #codeEditor {
-      flex: 1;
-      background: var(--code-bg);
-      border: none;
-      outline: none;
-      color: var(--accent2);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.75rem;
-      padding: 12px 16px;
-      resize: none;
-      overflow-y: auto;
-      line-height: 1.6;
-    }
-
-    .error-banner {
-      display: none;
-      padding: 8px 16px;
-      background: #2a0f0f;
-      border-top: 1px solid #5a2020;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.72rem;
-      color: #e06060;
-    }
-
-    .error-banner.visible {
-      display: block;
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 4px;
-    }
+      --bg: #0e0c0a; --panel: #161410; --border: #2a2520;
+      --accent: #e8845a; --accent2: #a8c5a0;
+      --text: #e8e2d9; --muted: #7a7067;
+      --user-bubble: #1e1b17; --ai-bubble: #191510; --code-bg: #0a0908;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Header */
+    header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--panel); flex-shrink: 0; gap: 16px; }
+    .logo { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: var(--accent); white-space: nowrap; }
+    .logo span { color: var(--text); font-style: italic; }
+    .api-row { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 480px; }
+    .api-row label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+    .api-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.75rem; outline: none; transition: border-color .2s; }
+    .api-row input:focus { border-color: var(--accent); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; transition: background .3s; }
+    .status-dot.ok { background: var(--accent2); }
+    .status-dot.err { background: #e06060; }
+
+    .workspace { display: flex; flex: 1; overflow: hidden; }
+
+    /* Chat panel */
+    .chat-panel { width: 430px; min-width: 320px; display: flex; flex-direction: column; border-right: 1px solid var(--border); flex-shrink: 0; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+    .welcome { text-align: center; padding: 36px 20px; color: var(--muted); }
+    .welcome h2 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--text); margin-bottom: 8px; }
+    .welcome p { font-size: 0.85rem; line-height: 1.6; margin-bottom: 16px; }
+    .example-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .chip { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 0.75rem; color: var(--muted); cursor: pointer; transition: all .2s; }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Messages */
+    .msg { display: flex; gap: 10px; animation: fadeUp .25s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .msg.user { flex-direction: row-reverse; }
+    .avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 500; flex-shrink: 0; margin-top: 2px; }
+    .msg.user .avatar { background: var(--accent); color: #fff; }
+    .msg.ai .avatar { background: #2a2520; color: var(--accent2); }
+    .bubble { max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.6; }
+    .msg.user .bubble { background: var(--user-bubble); border: 1px solid var(--border); border-top-right-radius: 3px; }
+    .msg.ai .bubble { background: var(--ai-bubble); border: 1px solid var(--border); border-top-left-radius: 3px; }
+
+    .bubble .code-block { margin-top: 8px; background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-family: 'DM Mono', monospace; font-size: 0.72rem; overflow-x: auto; white-space: pre; color: #a8c5a0; max-height: 160px; overflow-y: auto; }
+    .run-btn { margin-top: 8px; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 5px 12px; font-size: 0.75rem; cursor: pointer; font-family: 'DM Mono', monospace; transition: all .2s; display: inline-block; }
+    .run-btn:hover { background: var(--accent); color: #fff; }
+
+    /* Sketch picker */
+    .sketch-picker { margin-top: 10px; }
+    .sketch-picker-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+    .sketch-options { display: flex; flex-direction: column; gap: 7px; }
+    .sketch-option { background: #0f0d0b; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px 10px 36px; cursor: pointer; transition: all .2s; position: relative; }
+    .sketch-option:hover { border-color: var(--accent); background: #161208; }
+    .sketch-option.selected { border-color: var(--accent2); background: #0d120d; }
+    .sketch-option-num { position: absolute; left: 10px; top: 11px; width: 18px; height: 18px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-family: 'DM Mono', monospace; color: var(--muted); }
+    .sketch-option.selected .sketch-option-num { background: var(--accent2); color: #000; }
+    .sketch-option-title { font-size: 0.78rem; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+    .sketch-option-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
+    .sketch-option-style { display: inline-block; margin-top: 4px; font-size: 0.62rem; font-family: 'DM Mono', monospace; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; }
+    .generate-btn { margin-top: 9px; width: 100%; background: var(--accent); border: none; border-radius: 7px; padding: 9px; font-size: 0.8rem; color: #fff; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: background .2s; }
+    .generate-btn:hover { background: #d4704a; }
+    .generate-btn:disabled { background: var(--border); cursor: not-allowed; color: var(--muted); }
+
+    /* Feedback */
+    .feedback-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .feedback-label { font-size: 0.68rem; color: var(--muted); font-family: 'DM Mono', monospace; flex: 1; }
+    .fb-btn { background: transparent; border: 1px solid var(--border); border-radius: 5px; padding: 4px 10px; font-size: 0.82rem; cursor: pointer; transition: all .2s; color: var(--muted); }
+    .fb-btn:hover { border-color: var(--text); }
+    .fb-btn.active-up { border-color: var(--accent2); color: var(--accent2); background: #0d1a0d; }
+    .fb-btn.active-down { border-color: #e06060; color: #e06060; background: #2a0f0f; }
+
+    /* Feedback detail popup */
+    .feedback-detail { margin-top: 8px; background: #0f0d0b; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+    .feedback-detail-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .08em; color: #e06060; margin-bottom: 7px; font-family: 'DM Mono', monospace; }
+    .feedback-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    .fb-chip { background: transparent; border: 1px solid var(--border); border-radius: 12px; padding: 4px 10px; font-size: 0.72rem; color: var(--muted); cursor: pointer; transition: all .15s; font-family: 'DM Mono', monospace; }
+    .fb-chip:hover { border-color: #e06060; color: #e06060; }
+    .fb-chip.selected { border-color: #e06060; color: #e06060; background: #2a0f0f; }
+    .feedback-custom { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 7px 9px; color: var(--text); font-size: 0.78rem; font-family: 'DM Sans', sans-serif; outline: none; resize: none; transition: border-color .2s; }
+    .feedback-custom:focus { border-color: #e06060; }
+    .feedback-send-btn { margin-top: 7px; background: transparent; border: 1px solid #e06060; color: #e06060; border-radius: 5px; padding: 5px 14px; font-size: 0.74rem; cursor: pointer; font-family: 'DM Mono', monospace; transition: all .2s; }
+    .feedback-send-btn:hover { background: #e06060; color: #fff; }
+
+    /* Thinking */
+    .thinking { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+    .thinking span { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: blink 1.2s infinite; }
+    .thinking span:nth-child(2) { animation-delay: .2s; }
+    .thinking span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%,80%,100% { opacity:.2; transform:scale(.8); } 40% { opacity:1; transform:scale(1); } }
+    .thinking-label { font-size: 0.7rem; color: var(--muted); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+    /* Input area */
+    .chat-input-area { border-top: 1px solid var(--border); padding: 12px 14px; background: var(--panel); flex-shrink: 0; }
+    .ctx-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+    .ctx-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-family: 'DM Mono', monospace; white-space: nowrap; width: 42px; flex-shrink: 0; }
+    .ctx-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.72rem; outline: none; transition: border-color .2s; min-width: 0; }
+    .ctx-input:focus { border-color: var(--accent); }
+    .ctx-input::placeholder { color: var(--muted); }
+
+    /* Upload zone */
+    .upload-zone { flex: 1; display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px dashed var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; transition: all .2s; min-width: 0; }
+    .upload-zone:hover { border-color: var(--accent2); }
+    .upload-zone.has-image { border-color: var(--accent2); border-style: solid; background: #0d120d; }
+    .upload-zone-text { font-size: 0.72rem; font-family: 'DM Mono', monospace; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .upload-zone.has-image .upload-zone-text { color: var(--accent2); }
+    .upload-thumb { width: 24px; height: 24px; border-radius: 3px; object-fit: cover; flex-shrink: 0; display: none; border: 1px solid var(--accent2); }
+    .upload-clear { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 0 2px; flex-shrink: 0; display: none; line-height: 1; }
+    .upload-clear:hover { color: #e06060; }
+    #imageFileInput { display: none; }
+
+    .input-row { display: flex; gap: 8px; align-items: flex-end; }
+    textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; resize: none; outline: none; min-height: 44px; max-height: 120px; line-height: 1.5; transition: border-color .2s; }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+    .send-btn { width: 44px; height: 44px; background: var(--accent); border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .2s; }
+    .send-btn:hover { background: #d4704a; }
+    .send-btn:disabled { background: var(--border); cursor: not-allowed; }
+    .send-btn svg { width: 18px; height: 18px; fill: #fff; }
+    .hint { font-size: 0.68rem; color: var(--muted); margin-top: 5px; }
+
+    /* Preview */
+    .preview-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .preview-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--panel); flex-shrink: 0; }
+    .preview-title { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+    .preview-actions { display: flex; gap: 8px; }
+    .icon-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; color: var(--muted); font-size: 0.72rem; cursor: pointer; font-family: 'DM Mono', monospace; transition: all .2s; }
+    .icon-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    .icon-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .preview-canvas { flex: 1; display: flex; align-items: center; justify-content: center; background: #060504; position: relative; overflow: hidden; }
+    .preview-canvas iframe { width: 100%; height: 100%; border: none; display: block; }
+    .empty-preview { text-align: center; color: var(--muted); }
+    .empty-preview .big-icon { font-size: 3rem; margin-bottom: 12px; opacity: .3; }
+    .empty-preview p { font-size: 0.85rem; line-height: 1.6; }
+    .code-editor-wrap { border-top: 1px solid var(--border); max-height: 220px; display: none; flex-direction: column; }
+    .code-editor-wrap.visible { display: flex; }
+    .code-editor-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 14px; background: var(--panel); border-bottom: 1px solid var(--border); }
+    .code-editor-header span { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+    #codeEditor { flex: 1; background: var(--code-bg); border: none; outline: none; color: var(--accent2); font-family: 'DM Mono', monospace; font-size: 0.75rem; padding: 12px 16px; resize: none; overflow-y: auto; line-height: 1.6; }
+
+    /* Error banner — always flex when visible so button shows */
+    .error-banner { display: none; padding: 8px 14px; background: #1e0a0a; border-top: 1px solid #5a1a1a; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #e06060; }
+    .error-banner.visible { display: flex; align-items: center; gap: 10px; }
+    .error-msg { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .error-fix-btn { flex-shrink: 0; background: transparent; border: 1px solid #e06060; color: #e06060; border-radius: 4px; padding: 4px 10px; font-size: 0.68rem; cursor: pointer; font-family: 'DM Mono', monospace; white-space: nowrap; transition: background .2s; }
+    .error-fix-btn:hover { background: #3a1010; }
+
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
   </style>
 </head>
-
 <body>
 
-  <!-- Header -->
-  <header>
-    <div class="logo">p5 <span>Studio</span></div>
-    <div class="api-row">
-      <label>Anthropic API Key</label>
-      <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off" />
-      <div class="status-dot" id="statusDot" title="Enter your API key to connect"></div>
-    </div>
-  </header>
+<header>
+  <div class="logo">p5 <span>Studio</span></div>
+  <div class="api-row">
+    <label>Anthropic API Key</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off" />
+    <div class="status-dot" id="statusDot"></div>
+  </div>
+</header>
 
-  <!-- Workspace -->
-  <div class="workspace">
-
-    <!-- Chat -->
-    <div class="chat-panel">
-      <div class="chat-messages" id="chatMessages">
-        <div class="welcome" id="welcomeMsg">
-          <h2>Tell me your story.</h2>
-          <p>Describe a life experience or emotion — I'll translate it into a p5.js sketch. You can then refine it
-            through conversation.</p>
-          <div class="example-chips">
-            <div class="chip" onclick="fillPrompt(this)">feeling lonely in a crowd</div>
-            <div class="chip" onclick="fillPrompt(this)">the chaos of moving cities</div>
-            <div class="chip" onclick="fillPrompt(this)">first day of school anxiety</div>
-            <div class="chip" onclick="fillPrompt(this)">falling in love slowly</div>
-            <div class="chip" onclick="fillPrompt(this)">the calm after a storm</div>
-            <div class="chip" onclick="fillPrompt(this)">feeling on top of the world</div>
-          </div>
-        </div>
-      </div>
-      <div class="chat-input-area">
-        <div class="input-row">
-          <textarea id="userInput" placeholder="Describe an experience or emotion..." rows="1"
-            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-          <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
-            <svg viewBox="0 0 24 24">
-              <path d="M2 21l21-9L2 3v7l15 2-15 2z" />
-            </svg>
-          </button>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-          <div class="hint">Press Enter to send · Shift+Enter for new line</div>
-          <div class="test-override-group" style="display: flex; align-items: center; gap: 6px;">
-            <label style="font-size: 0.7rem; color: var(--muted);">Test Override:</label>
-            <select id="testOverride"
-              style="background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.7rem; outline: none; padding: 2px 4px;">
-              <option value="none">None (Real API)</option>
-              <option value="wrong">Wrong code (syntax error)</option>
-              <option value="no_code">No code</option>
-              <option value="error">Simulate API Error</option>
-            </select>
-          </div>
+<div class="workspace">
+  <div class="chat-panel">
+    <div class="chat-messages" id="chatMessages">
+      <div class="welcome" id="welcomeMsg">
+        <h2>Tell me your story.</h2>
+        <p>Describe a feeling or moment. Add a song and an image to shape the colors, motion, and texture of your sketch.</p>
+        <div class="example-chips">
+          <div class="chip" onclick="fillPrompt(this)">feeling lonely in a crowd</div>
+          <div class="chip" onclick="fillPrompt(this)">the chaos of moving cities</div>
+          <div class="chip" onclick="fillPrompt(this)">first day of school anxiety</div>
+          <div class="chip" onclick="fillPrompt(this)">falling in love slowly</div>
+          <div class="chip" onclick="fillPrompt(this)">the calm after a storm</div>
+          <div class="chip" onclick="fillPrompt(this)">feeling on top of the world</div>
         </div>
       </div>
     </div>
 
-    <!-- Preview -->
-    <div class="preview-panel">
-      <div class="preview-header">
-        <span class="preview-title">⬡ p5.js canvas</span>
-        <div class="preview-actions">
-          <button class="icon-btn" id="toggleCodeBtn" onclick="toggleCode()" disabled>{ } Code</button>
-          <button class="icon-btn" id="rerunBtn" onclick="rerunSketch()" disabled>↺ Re-run</button>
-        </div>
+    <div class="chat-input-area">
+      <!-- Song row -->
+      <div class="ctx-row">
+        <span class="ctx-label">♪ Song</span>
+        <input class="ctx-input" type="text" id="songInput" placeholder="e.g. Radiohead – Creep, Bon Iver – Holocene" />
       </div>
-
-      <div class="preview-canvas" id="previewCanvas">
-        <div class="empty-preview">
-          <div class="big-icon">◎</div>
-          <p>Your p5.js sketch will<br>appear here.</p>
+      <!-- Image upload row — NO URL input, upload only -->
+      <div class="ctx-row">
+        <span class="ctx-label">⬡ Img</span>
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('imageFileInput').click()">
+          <img id="uploadThumb" class="upload-thumb" alt="" />
+          <span class="upload-zone-text" id="uploadZoneText">Click to upload reference image…</span>
+          <button class="upload-clear" id="uploadClear" onclick="clearImage(event)" title="Remove image">✕</button>
         </div>
+        <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageUpload(event)" />
       </div>
-
-      <div class="code-editor-wrap" id="codeEditorWrap">
-        <div class="code-editor-header">
-          <span>sketch.js — editable</span>
-          <button class="icon-btn" onclick="runEditedCode()">▶ Run edited code</button>
-        </div>
-        <textarea id="codeEditor" spellcheck="false"></textarea>
+      <!-- Message input -->
+      <div class="input-row">
+        <textarea id="userInput" placeholder="Describe an experience or emotion…" rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
+          <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
       </div>
-
-      <div class="error-banner" id="errorBanner"></div>
+      <div class="hint">Enter to send · Shift+Enter for newline</div>
     </div>
-
   </div>
 
-  <script>
-    // ── State ──────────────────────────────────────────────────────────────────
-    const state = {
-      history: [],          // [{role, content}] for Claude API
-      currentCode: null,
-      isLoading: false,
+  <div class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-title">⬡ p5.js canvas</span>
+      <div class="preview-actions">
+        <button class="icon-btn" id="toggleCodeBtn" onclick="toggleCode()" disabled>{ } Code</button>
+        <button class="icon-btn" id="rerunBtn" onclick="rerunSketch()" disabled>↺ Re-run</button>
+      </div>
+    </div>
+    <div class="preview-canvas" id="previewCanvas">
+      <div class="empty-preview">
+        <div class="big-icon">◎</div>
+        <p>Your sketch will appear here.</p>
+      </div>
+    </div>
+    <div class="code-editor-wrap" id="codeEditorWrap">
+      <div class="code-editor-header">
+        <span>sketch.js — editable</span>
+        <button class="icon-btn" onclick="runEditedCode()">▶ Run edited</button>
+      </div>
+      <textarea id="codeEditor" spellcheck="false"></textarea>
+    </div>
+    <!-- Error banner with always-visible fix button -->
+    <div class="error-banner" id="errorBanner">
+      <span class="error-msg" id="errorMsg"></span>
+      <button class="error-fix-btn" id="errorFixBtn">✦ Ask AI to fix</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  history: [],          // conversation history for follow-up turns
+  currentCode: null,
+  isLoading: false,
+  imageBase64: null,    // raw base64 (no data: prefix)
+  imageMediaType: null,
+  lastError: null,      // last p5 error message for the fix button
+};
+
+// Wire up error fix button once at init (avoids onclick attribute escaping hell)
+document.getElementById('errorFixBtn').addEventListener('click', () => {
+  if (state.lastError) fixErrorWithAI(state.lastError);
+});
+
+// ── API key indicator ──────────────────────────────────────────────────────
+document.getElementById('apiKey').addEventListener('input', e => {
+  const dot = document.getElementById('statusDot');
+  const v = e.target.value.trim();
+  if (v.startsWith('sk-ant-') && v.length > 20) dot.className = 'status-dot ok';
+  else if (v.length > 0) dot.className = 'status-dot err';
+  else dot.className = 'status-dot';
+});
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fillPrompt(el) {
+  const ta = document.getElementById('userInput');
+  ta.value = el.textContent;
+  ta.focus();
+  autoResize(ta);
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function getApiKey() { return document.getElementById('apiKey').value.trim(); }
+
+// ── Image upload ────────────────────────────────────────────────────────────
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    const [, b64] = dataUrl.split(',');
+    state.imageBase64 = b64;
+    state.imageMediaType = file.type || 'image/jpeg';
+
+    const thumb = document.getElementById('uploadThumb');
+    thumb.src = dataUrl;
+    thumb.style.display = 'block';
+    document.getElementById('uploadZoneText').textContent = file.name;
+    document.getElementById('uploadZone').classList.add('has-image');
+    document.getElementById('uploadClear').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage(e) {
+  if (e) { e.stopPropagation(); }
+  state.imageBase64 = null;
+  state.imageMediaType = null;
+  document.getElementById('uploadThumb').style.display = 'none';
+  document.getElementById('uploadThumb').src = '';
+  document.getElementById('uploadZoneText').textContent = 'Click to upload reference image…';
+  document.getElementById('uploadZone').classList.remove('has-image');
+  document.getElementById('uploadClear').style.display = 'none';
+  document.getElementById('imageFileInput').value = '';
+}
+
+// ── Build user message content array (handles vision) ─────────────────────
+// Returns an array suitable for the "content" field of a user message.
+// If image is present, sends it as a vision block alongside text.
+function buildUserContent(text) {
+  if (state.imageBase64) {
+    return [
+      {
+        type: 'image',
+        source: { type: 'base64', media_type: state.imageMediaType, data: state.imageBase64 }
+      },
+      { type: 'text', text }
+    ];
+  }
+  return text; // plain string is fine for text-only
+}
+
+// ── Build enriched API text ────────────────────────────────────────────────
+// This is what we say to Claude in text — instructions on how to use refs.
+// The image itself is passed as a vision block separately.
+function buildApiText(rawText, song) {
+  let msg = rawText.trim();
+
+  const hasSong = !!song;
+  const hasImage = !!state.imageBase64;
+
+  if (hasSong || hasImage) {
+    msg += '\n\n━━ REFERENCE INPUTS ━━';
+
+    if (hasSong) {
+      msg += `
+
+SONG: "${song}"
+You must deeply analyse this song before writing any code. Think about:
+1. The SPECIFIC color palette this song evokes — name actual colors (e.g. "cold ash grey", "burnt sienna", "deep forest green"). NOT generic colors.
+2. The MOTION quality — how do things move in this song? (e.g. "long slow swells that barely move", "sudden staccato bursts with silence between", "relentless forward momentum")
+3. The TEXTURE — what does this song feel like if you touched it? (e.g. "rough concrete", "wet glass", "worn velvet", "brittle ice")
+4. The EMOTIONAL ARC — how does the emotion move through the song? (e.g. "starts small and tight, slowly expands until it breaks open", "sustained ache with no release")
+
+You MUST translate each of these into p5.js code choices:
+- Colors → actual hex values used for background, fills, strokes
+- Motion → frameRate, speed values, easing behavior, how shapes enter/exit
+- Texture → noise, opacity layering, stroke weight variation, blur simulation
+- Arc → how the sketch CHANGES over time (not static — it should evolve)`;
+    }
+
+    if (hasImage) {
+      msg += `
+
+REFERENCE IMAGE: I have uploaded an image above (visible to you as a vision input).
+You can SEE this image. Study it carefully and extract:
+1. The DOMINANT color palette — name the 3–5 most important colors with approximate hex values
+2. The LIGHT quality — is it harsh or soft? warm or cool? bright or dim? directional or ambient?
+3. The TEXTURE and grain — smooth, rough, layered, sparse, dense, organic, geometric?
+4. The COMPOSITIONAL ENERGY — chaotic scatter, calm balance, expansive emptiness, compressed tension?
+5. Any SPECIFIC VISUAL ELEMENTS (architectural, natural, abstract?) that could inspire shapes in the sketch
+
+CRITICALLY IMPORTANT: The sketch's color palette, background treatment, and overall visual atmosphere MUST feel like it came from this image. If the image is dark and moody, the sketch is dark and moody. If the image has warm amber tones, so does the sketch. The image is the visual foundation.`;
+    }
+
+    msg += '\n━━ END REFERENCES ━━';
+    msg += '\n\nBefore your code, write 2–3 sentences describing EXACTLY which colors, motion qualities, and textures you extracted from the references and how they appear in the code.';
+  }
+
+  return msg;
+}
+
+// ── System prompts ─────────────────────────────────────────────────────────
+const SYSTEM_OPTIONS = `You are an emotionally intelligent creative coding assistant who translates life experiences into p5.js visual art.
+
+The user has described an experience and may have provided a song and/or a reference image. Your job RIGHT NOW is to propose 3 distinct sketch directions — do NOT write code yet.
+
+IMPORTANT: If an image was provided, you can SEE it. Use what you observe to inform the options.
+If a song was provided, deeply consider its emotional/sonic texture.
+
+Each option must feel distinctly different — different visual metaphors, different motion qualities, different emotional approaches to the same feeling.
+
+Each option:
+- Title: 3–5 evocative words (not generic — make it specific to THIS emotion)
+- Description: 2 sentences — what it looks like AND what it feels like emotionally
+- Style keyword: the dominant technique (e.g. "flowing ribbons", "shattered geometry", "breathing fields", "slow dissolve")
+
+Respond ONLY with valid JSON — no text before or after, no markdown fences:
+{"acknowledgment":"1-2 sentences mirroring their exact words back empathetically","options":[{"title":"...","description":"...","style":"..."},{"title":"...","description":"...","style":"..."},{"title":"...","description":"...","style":"..."}]}`;
+
+const SYSTEM_GENERATE = `You are an emotionally intelligent creative coding assistant. You translate life experiences into expressive p5.js sketches that feel like the emotion they represent.
+
+## CRITICAL: DO NOT DEFAULT TO GENERIC PATTERNS
+You are FORBIDDEN from defaulting to:
+- Generic particle systems with random noise movement (unless the emotion specifically calls for scattered chaos)
+- Generic rainbow or random color palettes (colors must come from the references or emotion)
+- Static or barely-moving sketches
+- Predictable "beautiful but meaningless" visuals
+
+Every color, every shape, every motion must have an INTENTIONAL reason tied to the specific emotion/song/image provided.
+
+## USING THE SONG REFERENCE
+If a song is provided, you must:
+1. Extract its SPECIFIC color palette (real colors, not "warm" or "dark")
+2. Extract its MOTION quality (the rhythm, the pace, the texture of movement)
+3. Extract its EMOTIONAL ARC (how does the feeling move and develop?)
+4. Translate ALL of these into actual p5.js code variables
+
+Example — "Radiohead Creep":
+- Colors: pale yellow-green, deep charcoal, toxic green highlight, grey-white
+- Motion: mostly still with occasional lurching sudden movement, things that don't quite fit
+- Arc: builds an ache, reaches for something, falls back
+→ Sketch: dark background with a lone shape that slowly orbits, occasionally lurching out of orbit, pale sickly color
+
+## USING THE UPLOADED IMAGE (VISION)
+If an image was uploaded, you CAN SEE IT. Extract and use:
+- The actual dominant colors (give hex approximations)
+- The light/shadow quality  
+- The texture and compositional feeling
+The sketch must look like it was born from that image's color world.
+
+## FOLLOW-UP QUESTIONS
+After the sketch, ask ONE question that:
+- Uses the user's SPECIFIC words from their description
+- Probes for a concrete sensory memory or specific moment
+- Is NEVER generic ("what colors feel right" is forbidden)
+
+## p5.js RULES
+- setup() and draw() required
+- createCanvas(600, 500)
+- p5.js built-ins only — no external libraries
+- Runs in sandboxed iframe — no DOM outside p5
+- Must be animated and evolve over time
+- Comment key emotional decisions in the code
+- Follow-ups: always provide FULL updated sketch
+
+## RESPONSE FORMAT
+1. 1–2 sentence empathetic acknowledgment
+2. 2–3 sentences: what you extracted from references and how it maps to the code
+3. Code block
+4. One deep specific follow-up question`;
+
+// ── Claude API call ────────────────────────────────────────────────────────
+async function callClaude(messages, system, maxTokens = 2500) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('Please enter your Anthropic API key.');
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      system,
+      messages,
+    }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${resp.status}`);
+  }
+
+  const data = await resp.json();
+  return data.content[0]?.text || '';
+}
+
+// ── Chat rendering ─────────────────────────────────────────────────────────
+function appendUserBubble(text, song) {
+  const container = document.getElementById('chatMessages');
+  document.getElementById('welcomeMsg')?.remove();
+
+  const wrap = document.createElement('div');
+  wrap.className = 'msg user';
+  const avatar = mkAvatar('U', true);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  const p = document.createElement('p');
+  p.textContent = text;
+  bubble.appendChild(p);
+
+  const tags = [];
+  if (song) tags.push({ text: '♪ ' + song, color: 'var(--accent)', bg: '#1a1208' });
+  if (state.imageBase64) tags.push({ text: '⬡ reference image', color: 'var(--accent2)', bg: '#0d120d' });
+  if (tags.length) {
+    const row = document.createElement('div');
+    row.style.cssText = 'margin-top:6px; display:flex; flex-wrap:wrap; gap:5px;';
+    tags.forEach(t => {
+      const span = document.createElement('span');
+      span.style.cssText = `font-size:0.7rem; font-family:'DM Mono',monospace; padding:2px 8px; border-radius:3px; border:1px solid var(--border); color:${t.color}; background:${t.bg};`;
+      span.textContent = t.text;
+      row.appendChild(span);
+    });
+    bubble.appendChild(row);
+  }
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendAiBubble(text, code, withFeedback) {
+  const container = document.getElementById('chatMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai';
+  const avatar = mkAvatar('AI', false);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  // Display text (strip code fences)
+  const displayText = text.replace(/```[\s\S]*?```/g, '').trim();
+  if (displayText) {
+    const p = document.createElement('p');
+    p.style.whiteSpace = 'pre-wrap';
+    p.textContent = displayText;
+    bubble.appendChild(p);
+  }
+
+  if (code) {
+    const pre = document.createElement('div');
+    pre.className = 'code-block';
+    pre.textContent = code;
+    bubble.appendChild(pre);
+
+    const runBtn = document.createElement('button');
+    runBtn.className = 'run-btn';
+    runBtn.textContent = '▶ Run sketch';
+    runBtn.onclick = () => runSketch(code);
+    bubble.appendChild(runBtn);
+  }
+
+  if (withFeedback && code) {
+    appendFeedbackRow(bubble, code);
+  }
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendFeedbackRow(bubble, code) {
+  const row = document.createElement('div');
+  row.className = 'feedback-row';
+
+  const lbl = document.createElement('span');
+  lbl.className = 'feedback-label';
+  lbl.textContent = 'Does this feel right?';
+
+  const upBtn = document.createElement('button');
+  upBtn.className = 'fb-btn';
+  upBtn.textContent = '👍';
+  upBtn.title = 'Yes, this resonates';
+
+  const downBtn = document.createElement('button');
+  downBtn.className = 'fb-btn';
+  downBtn.textContent = '👎';
+  downBtn.title = "Not quite";
+
+  upBtn.onclick = () => {
+    upBtn.className = 'fb-btn active-up';
+    downBtn.className = 'fb-btn';
+    // Remove any existing detail panel
+    bubble.querySelector('.feedback-detail')?.remove();
+    // Append positive follow-up
+    const p = document.createElement('p');
+    p.style.cssText = 'margin-top:8px; font-size:0.78rem; color:var(--accent2);';
+    p.textContent = 'Glad it resonates. What part hits closest — the motion, the colors, or the overall atmosphere?';
+    bubble.appendChild(p);
+  };
+
+  downBtn.onclick = () => {
+    downBtn.className = 'fb-btn active-down';
+    upBtn.className = 'fb-btn';
+    bubble.querySelector('.feedback-detail')?.remove();
+    showFeedbackDetail(bubble);
+  };
+
+  row.appendChild(lbl);
+  row.appendChild(upBtn);
+  row.appendChild(downBtn);
+  bubble.appendChild(row);
+}
+
+function showFeedbackDetail(bubble) {
+  const detail = document.createElement('div');
+  detail.className = 'feedback-detail';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'feedback-detail-label';
+  lbl.textContent = "What's off? (pick all that apply)";
+  detail.appendChild(lbl);
+
+  const chipOptions = [
+    "Colors feel wrong",
+    "Motion doesn't fit",
+    "Too abstract",
+    "Not abstract enough",
+    "Missing the emotion",
+    "Too busy / chaotic",
+    "Too simple / empty",
+    "Doesn't match the song",
+    "Doesn't match the image",
+  ];
+
+  const selected = new Set();
+  const chipsRow = document.createElement('div');
+  chipsRow.className = 'feedback-chips';
+
+  chipOptions.forEach(opt => {
+    const chip = document.createElement('button');
+    chip.className = 'fb-chip';
+    chip.textContent = opt;
+    chip.onclick = () => {
+      if (selected.has(opt)) { selected.delete(opt); chip.classList.remove('selected'); }
+      else { selected.add(opt); chip.classList.add('selected'); }
+    };
+    chipsRow.appendChild(chip);
+  });
+  detail.appendChild(chipsRow);
+
+  const customInput = document.createElement('textarea');
+  customInput.className = 'feedback-custom';
+  customInput.rows = 2;
+  customInput.placeholder = 'Anything else? Describe what you were hoping for…';
+  detail.appendChild(customInput);
+
+  const sendBtn = document.createElement('button');
+  sendBtn.className = 'feedback-send-btn';
+  sendBtn.textContent = '↺ Revise sketch';
+  sendBtn.onclick = () => {
+    const chips = [...selected].join(', ');
+    const custom = customInput.value.trim();
+    let feedback = 'Please revise the sketch. Problems: ';
+    if (chips) feedback += chips + '. ';
+    if (custom) feedback += custom;
+    if (!chips && !custom) feedback = 'Please try a completely different visual approach for the same emotion.';
+    submitFeedbackRevision(feedback);
+    detail.remove();
+  };
+  detail.appendChild(sendBtn);
+
+  bubble.appendChild(detail);
+}
+
+function submitFeedbackRevision(feedbackText) {
+  const ta = document.getElementById('userInput');
+  ta.value = feedbackText;
+  autoResize(ta);
+  // Trigger send
+  sendMessage();
+}
+
+function mkAvatar(label, isUser) {
+  const el = document.createElement('div');
+  el.className = 'avatar';
+  el.textContent = label;
+  if (isUser) el.style.background = 'var(--accent)';
+  else { el.style.background = '#2a2520'; el.style.color = 'var(--accent2)'; }
+  return el;
+}
+
+function appendThinking(label) {
+  const container = document.getElementById('chatMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai';
+  wrap.id = 'thinkingMsg';
+
+  const avatar = mkAvatar('AI', false);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
+  if (label) {
+    const lbl = document.createElement('div');
+    lbl.className = 'thinking-label';
+    lbl.textContent = label;
+    bubble.appendChild(lbl);
+  }
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeThinking() { document.getElementById('thinkingMsg')?.remove(); }
+
+function extractCode(text) {
+  const fenced = text.match(/```(?:javascript|js|p5\.?js)?\s*([\s\S]*?)```/i);
+  if (fenced) return fenced[1].trim();
+  if (text.includes('function setup') && text.includes('function draw')) return text.trim();
+  return null;
+}
+
+// ── Sketch picker ──────────────────────────────────────────────────────────
+function renderSketchPicker(options, ack) {
+  const container = document.getElementById('chatMessages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai';
+  const avatar = mkAvatar('AI', false);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  if (ack) {
+    const p = document.createElement('p');
+    p.textContent = ack;
+    bubble.appendChild(p);
+  }
+
+  const picker = document.createElement('div');
+  picker.className = 'sketch-picker';
+  const lbl = document.createElement('div');
+  lbl.className = 'sketch-picker-label';
+  lbl.textContent = 'Choose a direction →';
+  picker.appendChild(lbl);
+
+  const optWrap = document.createElement('div');
+  optWrap.className = 'sketch-options';
+
+  let selectedIdx = null;
+
+  const genBtn = document.createElement('button');
+  genBtn.className = 'generate-btn';
+  genBtn.textContent = '✦ Generate this sketch';
+  genBtn.disabled = true;
+
+  options.forEach((opt, i) => {
+    const card = document.createElement('div');
+    card.className = 'sketch-option';
+
+    const num = document.createElement('div');
+    num.className = 'sketch-option-num';
+    num.textContent = i + 1;
+
+    const title = document.createElement('div');
+    title.className = 'sketch-option-title';
+    title.textContent = opt.title;
+
+    const desc = document.createElement('div');
+    desc.className = 'sketch-option-desc';
+    desc.textContent = opt.description;
+
+    const style = document.createElement('span');
+    style.className = 'sketch-option-style';
+    style.textContent = opt.style;
+
+    card.appendChild(num);
+    card.appendChild(title);
+    card.appendChild(desc);
+    card.appendChild(style);
+
+    card.onclick = () => {
+      optWrap.querySelectorAll('.sketch-option').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedIdx = i;
+      genBtn.disabled = false;
     };
 
-    // ── API key watcher ────────────────────────────────────────────────────────
-    document.getElementById('apiKey').addEventListener('input', (e) => {
-      const dot = document.getElementById('statusDot');
-      const v = e.target.value.trim();
-      if (v.startsWith('sk-ant-') && v.length > 20) {
-        dot.className = 'status-dot ok';
-        dot.title = 'Key looks valid';
-      } else if (v.length > 0) {
-        dot.className = 'status-dot err';
-        dot.title = 'Key format looks off';
-      } else {
-        dot.className = 'status-dot';
-        dot.title = 'Enter your API key';
-      }
-    });
+    optWrap.appendChild(card);
+  });
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
-    function fillPrompt(el) {
-      const ta = document.getElementById('userInput');
-      ta.value = el.textContent;
-      ta.focus();
-      autoResize(ta);
+  picker.appendChild(optWrap);
+
+  genBtn.onclick = () => {
+    if (selectedIdx === null) return;
+    genBtn.disabled = true;
+    genBtn.textContent = '…generating';
+    generateFromOption(options[selectedIdx]);
+  };
+  picker.appendChild(genBtn);
+
+  bubble.appendChild(picker);
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── SEND (first turn → show picker, follow-ups → generate directly) ────────
+async function sendMessage() {
+  const ta = document.getElementById('userInput');
+  const raw = ta.value.trim();
+  if (!raw || state.isLoading) return;
+  if (!getApiKey()) { alert('Please enter your Anthropic API key.'); return; }
+
+  const song = document.getElementById('songInput').value.trim();
+
+  ta.value = '';
+  autoResize(ta);
+  state.isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  appendUserBubble(raw, song);
+
+  if (state.history.length > 0) {
+    // Follow-up turn — generate directly
+    await generateDirectly(raw, song);
+  } else {
+    // First turn — show 3 options
+    await fetchOptions(raw, song);
+  }
+
+  state.isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+// ── Step 1: fetch 3 options ────────────────────────────────────────────────
+async function fetchOptions(raw, song) {
+  appendThinking('thinking up directions…');
+
+  try {
+    const apiText = buildApiText(raw, song);
+    const userContent = buildUserContent(apiText);
+
+    const response = await callClaude(
+      [{ role: 'user', content: userContent }],
+      SYSTEM_OPTIONS,
+      800
+    );
+
+    removeThinking();
+
+    let parsed;
+    try {
+      const cleaned = response.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      // JSON failed — go straight to generation
+      await generateDirectly(raw, song);
+      return;
     }
 
-    function autoResize(el) {
-      el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-    }
+    // Store context for when user picks
+    state._pendingRaw = raw;
+    state._pendingSong = song;
+    state._pendingApiText = apiText;
 
-    function handleKey(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-    }
+    renderSketchPicker(parsed.options, parsed.acknowledgment);
 
-    function getApiKey() {
-      return document.getElementById('apiKey').value.trim();
-    }
+  } catch (err) {
+    removeThinking();
+    appendAiBubble(`Connection error: ${err.message}`, null, false);
+  }
+}
 
-    // ── Chat rendering ─────────────────────────────────────────────────────────
-    function appendMessage(role, content, code) {
-      const container = document.getElementById('chatMessages');
-      const welcome = document.getElementById('welcomeMsg');
-      if (welcome) welcome.remove();
+// ── Step 2: generate from picked option ───────────────────────────────────
+async function generateFromOption(option) {
+  state.isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
 
-      const wrap = document.createElement('div');
-      wrap.className = `msg ${role}`;
+  appendThinking(`building "${option.title}"…`);
 
-      const avatar = document.createElement('div');
-      avatar.className = 'avatar';
-      avatar.textContent = role === 'user' ? 'U' : 'AI';
+  try {
+    const styleContext = `\n\nThe user chose this sketch direction: "${option.title}" — ${option.description} (technique: ${option.style}). Build this vision precisely.`;
+    const fullText = (state._pendingApiText || state._pendingRaw) + styleContext;
 
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
+    const userContent = buildUserContent(fullText);
 
-      // Text content (strip code blocks from display text)
-      const displayText = content.replace(/```[\s\S]*?```/g, '').trim();
-      if (displayText) {
-        const p = document.createElement('p');
-        p.textContent = displayText;
-        bubble.appendChild(p);
-      }
+    const messages = [{ role: 'user', content: userContent }];
+    const response = await callClaude(messages, SYSTEM_GENERATE, 3000);
 
-      // Code block display
-      if (code) {
-        const pre = document.createElement('div');
-        pre.className = 'code-block';
-        pre.textContent = code;
-        bubble.appendChild(pre);
+    // Save to history for follow-ups
+    state.history.push({ role: 'user', content: fullText });
+    state.history.push({ role: 'assistant', content: response });
 
-        const btn = document.createElement('button');
-        btn.className = 'run-btn';
-        btn.textContent = '▶ Run sketch';
-        btn.onclick = () => runSketch(code);
-        bubble.appendChild(btn);
-      }
+    removeThinking();
+    const code = extractCode(response);
+    appendAiBubble(response, code, true);
 
-      wrap.appendChild(avatar);
-      wrap.appendChild(bubble);
-      container.appendChild(wrap);
-      container.scrollTop = container.scrollHeight;
-    }
+    if (code) setSketch(code);
 
-    function appendThinking() {
-      const container = document.getElementById('chatMessages');
-      const wrap = document.createElement('div');
-      wrap.className = 'msg ai';
-      wrap.id = 'thinkingMsg';
+  } catch (err) {
+    removeThinking();
+    appendAiBubble(`Error: ${err.message}`, null, false);
+  }
 
-      const avatar = document.createElement('div');
-      avatar.className = 'avatar';
-      avatar.textContent = 'AI';
+  state.isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+}
 
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
+// ── Follow-up: direct generation ───────────────────────────────────────────
+async function generateDirectly(raw, song) {
+  appendThinking('updating sketch…');
 
-      const dots = document.createElement('div');
-      dots.className = 'thinking';
-      dots.innerHTML = '<span></span><span></span><span></span>';
-      bubble.appendChild(dots);
+  try {
+    const apiText = buildApiText(raw, song);
 
-      wrap.appendChild(avatar);
-      wrap.appendChild(bubble);
-      container.appendChild(wrap);
-      container.scrollTop = container.scrollHeight;
-    }
+    // For follow-ups with image, we include it again in the content
+    // but use text-only in history (API doesn't support image in old history turns well)
+    const userContent = buildUserContent(apiText);
 
-    function removeThinking() {
-      const el = document.getElementById('thinkingMsg');
-      if (el) el.remove();
-    }
+    // Build messages: history (text only) + new message (with image if present)
+    const messages = [
+      ...state.history,
+      { role: 'user', content: userContent }
+    ];
 
-    // ── Extract p5.js code ─────────────────────────────────────────────────────
-    function extractCode(text) {
-      // Try fenced code block first
-      const fenced = text.match(/```(?:javascript|js|p5\.?js)?\s*([\s\S]*?)```/i);
-      if (fenced) return fenced[1].trim();
+    const response = await callClaude(messages, SYSTEM_GENERATE, 3000);
 
-      // Fallback: look for setup/draw functions
-      if (text.includes('function setup') || text.includes('function draw')) {
-        return text.trim();
-      }
-      return null;
-    }
+    state.history.push({ role: 'user', content: apiText });
+    state.history.push({ role: 'assistant', content: response });
 
-    // ── Claude API call ────────────────────────────────────────────────────────
-    const SYSTEM_PROMPT = `You are an emotionally intelligent creative coding assistant. Your role is to help users explore and express their life experiences and emotions through p5.js sketches — like a gentle interviewer who also happens to be an artist.
+    removeThinking();
+    const code = extractCode(response);
+    appendAiBubble(response, code, !!code);
 
-When a user describes an experience or emotion:
-1. Respond with a brief empathetic acknowledgment that mirrors their language — use their own words and phrasing back to them so they feel heard (1-2 sentences max).
-2. Then provide COMPLETE, RUNNABLE p5.js code in a fenced code block (using \`\`\`javascript ... \`\`\`).
-3. After the code, ALWAYS ask a deeper follow-up question that builds on the SPECIFIC context of what the user said. Do NOT ask generic questions. Instead, pick up on emotional cues, imagery, or details they mentioned and gently probe further. Examples of this approach:
-   - If user said "feeling lonely in a crowd" → "You mentioned being surrounded by people — was there a specific moment where you felt the most invisible, or is it more of a constant hum?"
-   - If user said "the chaos of moving cities" → "What part felt the most overwhelming — leaving behind the familiar, or the flood of everything new?"
-   - If user said "falling in love slowly" → "Was there a particular moment where you realized it had shifted from friendship to something more?"
-   Your goal is to uncover deeper layers of the emotion so the next sketch can be even more resonant.
+    if (code) setSketch(code);
 
-p5.js code rules:
-- Always include both setup() and draw() functions.
-- Use createCanvas(600, 500) for the canvas size.
-- Use ONLY p5.js built-in functions (no external libraries).
-- The sketch should run in a browser iframe — do NOT use DOM manipulation outside p5's API.
-- Make the sketch visually expressive and emotionally resonant.
-- Use motion, color, and form to represent the feeling — not just static shapes.
-- Comment key sections briefly so the user understands the code.
+  } catch (err) {
+    removeThinking();
+    appendAiBubble(`Error: ${err.message}`, null, false);
+  }
+}
 
-When the user asks for changes:
-- Acknowledge the requested change briefly.
-- Always provide the FULL updated sketch code (not just a diff).
-- Still end with a contextual follow-up question that digs deeper into the emotion.
+// ── Sketch helpers ─────────────────────────────────────────────────────────
+function setSketch(code) {
+  state.currentCode = code;
+  runSketch(code);
+  document.getElementById('rerunBtn').disabled = false;
+  document.getElementById('toggleCodeBtn').disabled = false;
+  document.getElementById('codeEditor').value = code;
+}
 
-Keep text responses short and warm. The code is the main output, but the questions are what make the conversation meaningful.`;
-
-    async function callClaude(userMessage) {
-      const apiKey = getApiKey();
-      if (!apiKey) throw new Error('Please enter your Anthropic API key.');
-
-      state.history.push({ role: 'user', content: userMessage });
-
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          system: SYSTEM_PROMPT,
-          messages: state.history,
-        }),
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err?.error?.message || `API error ${resp.status}`);
-      }
-
-      const data = await resp.json();
-      const assistantText = data.content[0]?.text || '';
-      state.history.push({ role: 'assistant', content: assistantText });
-      return assistantText;
-    }
-
-    // ── Send message ───────────────────────────────────────────────────────────
-    async function sendMessage() {
-      const ta = document.getElementById('userInput');
-      const msg = ta.value.trim();
-      if (!msg || state.isLoading) return;
-
-      const testOverride = document.getElementById('testOverride') ? document.getElementById('testOverride').value : 'none';
-
-      if (testOverride === 'none' && !getApiKey()) {
-        alert('Please enter your Anthropic API key at the top of the page.');
-        return;
-      }
-
-      ta.value = '';
-      autoResize(ta);
-      state.isLoading = true;
-      document.getElementById('sendBtn').disabled = true;
-
-      appendMessage('user', msg);
-      appendThinking();
-
-      try {
-        let response;
-
-        if (testOverride !== 'none') {
-          await new Promise(r => setTimeout(r, 800)); // Simulate network delay
-          if (testOverride === 'wrong') {
-            response = `I understand. Here is a wrong answer that will break your sketch:\n\`\`\`javascript\nfunction setup() {\n  createCanvas(600, 500);\n}\nfunction draw() {\n  background(200);\n  fill('red');\n  circlee(300, 250, 100); // intentional typo\n}\n\`\`\``;
-            state.history.push({ role: 'user', content: msg }, { role: 'assistant', content: response });
-          } else if (testOverride === 'no_code') {
-            response = `I can relate to that feeling! I'm sorry to hear you're experiencing that. As an AI without a creative tool right now, I can only give you words.`;
-            state.history.push({ role: 'user', content: msg }, { role: 'assistant', content: response });
-          } else if (testOverride === 'error') {
-            throw new Error("Simulated API Error");
-          }
-        } else {
-          // Real API call
-          response = await callClaude(msg);
-        }
-
-        removeThinking();
-        const code = extractCode(response);
-        appendMessage('ai', response, code);
-
-        if (code) {
-          state.currentCode = code;
-          runSketch(code);
-          document.getElementById('rerunBtn').disabled = false;
-          document.getElementById('toggleCodeBtn').disabled = false;
-          document.getElementById('codeEditor').value = code;
-        }
-      } catch (err) {
-        removeThinking();
-        appendMessage('ai', `I'm having a little trouble connecting to my brain right now. The error is: **${err.message}**. Let's try that again!`);
-      }
-
-      state.isLoading = false;
-      document.getElementById('sendBtn').disabled = false;
-    }
-
-    // ── p5.js runner ───────────────────────────────────────────────────────────
-    function buildSketchHTML(code) {
-      return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#060504; display:flex; align-items:center; justify-content:center; height:100vh; overflow:hidden; }
-  canvas { display:block; }
-</style>
+function buildSketchHTML(code) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#060504;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;}canvas{display:block;}</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"><\/script>
-</head>
-<body>
+</head><body>
 <script>
-window.onerror = function(msg, src, line) {
-  parent.postMessage({type:'p5error', msg: msg + ' (line ' + line + ')'}, '*');
-};
+window.onerror=function(msg,src,line){parent.postMessage({type:'p5error',msg:msg+' (line '+line+')'},'*');return true;};
 ${code}
-<\/script>
+<\/script></body></html>`;
+}
+
+function runSketch(code) {
+  const panel = document.getElementById('previewCanvas');
+  hideError();
+  panel.querySelector('iframe')?.remove();
+  panel.querySelector('.empty-preview')?.remove();
+  const iframe = document.createElement('iframe');
+  iframe.sandbox = 'allow-scripts';
+  iframe.srcdoc = buildSketchHTML(code);
+  panel.appendChild(iframe);
+}
+
+// ── Error banner ───────────────────────────────────────────────────────────
+window.addEventListener('message', e => {
+  if (e.data?.type === 'p5error') {
+    showError(e.data.msg);
+  }
+});
+
+function showError(msg) {
+  state.lastError = msg;
+  document.getElementById('errorMsg').textContent = '⚠ ' + msg;
+  document.getElementById('errorBanner').className = 'error-banner visible';
+}
+
+function hideError() {
+  state.lastError = null;
+  document.getElementById('errorBanner').className = 'error-banner';
+}
+
+function fixErrorWithAI(msg) {
+  hideError();
+  const ta = document.getElementById('userInput');
+  ta.value = `The sketch crashed with this error: "${msg}". Please find and fix the bug — return the complete corrected sketch.`;
+  autoResize(ta);
+  sendMessage();
+}
+
+// ── Preview controls ───────────────────────────────────────────────────────
+function rerunSketch() { if (state.currentCode) runSketch(state.currentCode); }
+
+function toggleCode() {
+  const wrap = document.getElementById('codeEditorWrap');
+  const btn = document.getElementById('toggleCodeBtn');
+  btn.textContent = wrap.classList.toggle('visible') ? '{ } Hide' : '{ } Code';
+}
+
+function runEditedCode() {
+  const code = document.getElementById('codeEditor').value;
+  if (code) { setSketch(code); hideError(); }
+}
+</script>
 </body>
-</html>`;
-    }
-
-    function runSketch(code) {
-      const panel = document.getElementById('previewCanvas');
-      const errBanner = document.getElementById('errorBanner');
-      errBanner.className = 'error-banner';
-
-      // Remove old iframe
-      const old = panel.querySelector('iframe');
-      if (old) old.remove();
-      const emptyEl = panel.querySelector('.empty-preview');
-      if (emptyEl) emptyEl.remove();
-
-      const iframe = document.createElement('iframe');
-      iframe.sandbox = 'allow-scripts';
-      iframe.srcdoc = buildSketchHTML(code);
-      panel.appendChild(iframe);
-    }
-
-    // Listen for errors from iframe
-    window.addEventListener('message', (e) => {
-      if (e.data?.type === 'p5error') {
-        const errBanner = document.getElementById('errorBanner');
-        const safeMsg = e.data.msg.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        errBanner.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span>⚠ Sketch error: ${e.data.msg}</span>
-        <button onclick="sendErrorToAI('${safeMsg}')" 
-                style="background: transparent; border: 1px solid #e06060; color: #e06060; border-radius: 4px; padding: 4px 8px; font-size: 0.65rem; cursor: pointer; transition: all 0.2s;"
-                onmouseover="this.style.background='#5a2020'" onmouseout="this.style.background='transparent'">
-          Ask AI to fix
-        </button>
-      </div>`;
-        errBanner.className = 'error-banner visible';
-      }
-    });
-
-    function sendErrorToAI(msg) {
-      const ta = document.getElementById('userInput');
-      ta.value = "The sketch crashed with this error: " + msg + " . Please fix the code.";
-      sendMessage();
-    }
-
-    function rerunSketch() {
-      if (state.currentCode) runSketch(state.currentCode);
-    }
-
-    function toggleCode() {
-      const wrap = document.getElementById('codeEditorWrap');
-      const btn = document.getElementById('toggleCodeBtn');
-      if (wrap.classList.contains('visible')) {
-        wrap.classList.remove('visible');
-        btn.textContent = '{ } Code';
-      } else {
-        wrap.classList.add('visible');
-        btn.textContent = '{ } Hide';
-      }
-    }
-
-    function runEditedCode() {
-      const code = document.getElementById('codeEditor').value;
-      if (code) {
-        state.currentCode = code;
-        runSketch(code);
-        const errBanner = document.getElementById('errorBanner');
-        errBanner.className = 'error-banner';
-      }
-    }
-  </script>
-</body>
-
 </html>
