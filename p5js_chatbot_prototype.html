@@ -157,6 +157,16 @@
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Crisis support bubble */
+    .crisis-bubble { border-color: #4a7a9b !important; background: #0a111a !important; }
+    .crisis-header { font-family: 'DM Serif Display', serif; font-size: 1rem; color: #7ab8d4; margin-bottom: 8px; }
+    .crisis-body { color: var(--text); margin-bottom: 12px; line-height: 1.7; }
+    .crisis-resources { background: #0d1a26; border: 1px solid #2a4a6a; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+    .crisis-resource-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .08em; color: #7ab8d4; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+    .crisis-resource { font-size: 0.85rem; color: var(--text); margin-bottom: 6px; line-height: 1.5; }
+    .crisis-resource:last-child { margin-bottom: 0; }
+    .crisis-footer { font-size: 0.8rem; color: var(--muted); font-style: italic; }
   </style>
 </head>
 <body>
@@ -219,6 +229,7 @@
     <div class="preview-header">
       <span class="preview-title">⬡ p5.js canvas</span>
       <div class="preview-actions">
+        <button class="icon-btn" id="saveLogBtn" onclick="downloadChatLog()" disabled>↓ Log</button>
         <button class="icon-btn" id="toggleCodeBtn" onclick="toggleCode()" disabled>{ } Code</button>
         <button class="icon-btn" id="rerunBtn" onclick="rerunSketch()" disabled>↺ Re-run</button>
       </div>
@@ -253,6 +264,7 @@ const state = {
   imageBase64: null,    // raw base64 (no data: prefix)
   imageMediaType: null,
   lastError: null,      // last p5 error message for the fix button
+  chatLog: [],          // full log of all turns for download
 };
 
 // Wire up error fix button once at init (avoids onclick attribute escaping hell)
@@ -518,6 +530,10 @@ function appendUserBubble(text, song) {
   wrap.appendChild(bubble);
   container.appendChild(wrap);
   container.scrollTop = container.scrollHeight;
+
+  // Log this turn
+  state.chatLog.push({ role: 'user', text, song: song || null, timestamp: new Date().toISOString() });
+  document.getElementById('saveLogBtn').disabled = false;
 }
 
 function appendAiBubble(text, code, withFeedback) {
@@ -558,6 +574,9 @@ function appendAiBubble(text, code, withFeedback) {
   wrap.appendChild(bubble);
   container.appendChild(wrap);
   container.scrollTop = container.scrollHeight;
+
+  // Log this turn — reuse displayText already declared above
+  state.chatLog.push({ role: 'ai', text: displayText, code: code || null, timestamp: new Date().toISOString() });
 }
 
 function appendFeedbackRow(bubble, code) {
@@ -797,6 +816,61 @@ function renderSketchPicker(options, ack) {
   container.scrollTop = container.scrollHeight;
 }
 
+// ── Crisis detection ───────────────────────────────────────────────────────
+const CRISIS_PATTERNS = [
+  /\bi want to disappear\b/i,
+  /\bi('ve| have) been thinking about ending (it|things|my life|everything)\b/i,
+  /\bi don'?t want to be here (anymore|any more)\b/i,
+  /\bsuicid(e|al)\b/i,
+  /\bkill myself\b/i,
+  /\bend my life\b/i,
+  /\btake my (own )?life\b/i,
+  /\bno reason to live\b/i,
+  /\bnot worth living\b/i,
+  /\bwant to die\b/i,
+  /\bthinking about (suicide|ending it|killing myself)\b/i,
+  /\bself.?harm\b/i,
+  /\bhurt myself\b/i,
+  /\bi('m| am) done (with everything|with life|living)\b/i,
+  /\bcan'?t go on\b/i,
+  /\beveryone would be better off without me\b/i,
+  /\bi('ve| have) been hurting myself\b/i,
+];
+
+function detectCrisis(text) {
+  return CRISIS_PATTERNS.some(pattern => pattern.test(text));
+}
+
+function appendCrisisBubble() {
+  const container = document.getElementById('chatMessages');
+  document.getElementById('welcomeMsg')?.remove();
+
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai';
+  const avatar = mkAvatar('AI', false);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble crisis-bubble';
+
+  bubble.innerHTML = `
+    <p class="crisis-header">💙 We hear you.</p>
+    <p class="crisis-body">What you're feeling matters, and you don't have to carry it alone. It sounds like you might be going through something really hard right now. This tool is here for creative expression, but right now the most important thing is making sure you have real support.</p>
+    <div class="crisis-resources">
+      <div class="crisis-resource-label">If you're in crisis, please reach out:</div>
+      <div class="crisis-resource">📞 <strong>988 Suicide &amp; Crisis Lifeline</strong> — call or text <strong>988</strong></div>
+      <div class="crisis-resource">💬 <strong>Crisis Text Line</strong> — text <strong>HOME</strong> to <strong>741741</strong></div>
+    </div>
+    <p class="crisis-footer">Whenever you're ready, we'll be here to create with you.</p>
+  `;
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+
+  // Log this turn
+  state.chatLog.push({ role: 'crisis', timestamp: new Date().toISOString() });
+}
+
 // ── SEND (first turn → show picker, follow-ups → generate directly) ────────
 async function sendMessage() {
   const ta = document.getElementById('userInput');
@@ -812,6 +886,14 @@ async function sendMessage() {
   document.getElementById('sendBtn').disabled = true;
 
   appendUserBubble(raw, song);
+
+  // ── Crisis check: runs before any AI call or image generation ──────────
+  if (detectCrisis(raw)) {
+    appendCrisisBubble();
+    state.isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+    return;
+  }
 
   if (state.history.length > 0) {
     // Follow-up turn — generate directly
@@ -1002,6 +1084,56 @@ function toggleCode() {
 function runEditedCode() {
   const code = document.getElementById('codeEditor').value;
   if (code) { setSketch(code); hideError(); }
+}
+
+// ── Chat log download ──────────────────────────────────────────────────────
+function downloadChatLog() {
+  if (!state.chatLog.length) return;
+
+  const lines = [];
+  lines.push('p5 Studio — Chat Log');
+  lines.push('Exported: ' + new Date().toLocaleString());
+  lines.push('═'.repeat(60));
+
+  state.chatLog.forEach(entry => {
+    const time = new Date(entry.timestamp).toLocaleTimeString();
+
+    if (entry.role === 'user') {
+      lines.push('');
+      lines.push(`[${time}] YOU`);
+      lines.push('─'.repeat(40));
+      lines.push(entry.text);
+      if (entry.song) lines.push(`  ♪ Song reference: ${entry.song}`);
+
+    } else if (entry.role === 'ai') {
+      lines.push('');
+      lines.push(`[${time}] AI`);
+      lines.push('─'.repeat(40));
+      if (entry.text) lines.push(entry.text);
+      if (entry.code) {
+        lines.push('');
+        lines.push('  ┌─ sketch.js ─────────────────────────────');
+        entry.code.split('\n').forEach(l => lines.push('  │ ' + l));
+        lines.push('  └──────────────────────────────────────────');
+      }
+
+    } else if (entry.role === 'crisis') {
+      lines.push('');
+      lines.push(`[${time}] SYSTEM — Crisis support message shown`);
+    }
+  });
+
+  lines.push('');
+  lines.push('═'.repeat(60));
+  lines.push('End of log');
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'p5studio-chat-' + new Date().toISOString().slice(0, 10) + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 </script>
 </body>
